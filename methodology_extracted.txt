@@ -1,0 +1,424 @@
+3. Methods
+This study proposes a deep learning-based method for pixel-wise flood classification
+and temporal anomaly mapping by integrating long-term Sentinel-1 SAR observations.
+The proposed method consists of three steps (Figure 2).
+Figure 2. Overview of the proposed method. The ellipsis indicates the intermediate feature layers
+(C2–C8), which are omitted for visual clarity.
+First, multi-year Sentinel-1 Ground Range Detected (GRD) data are systematically
+pre-processed and seasonally filtered to construct a seasonal pixel-based SAR time-series
+dataset. Second, a 9-channel feature tensor is constructed from the transformed empirical
+distribution, piecewise linear fitting results, and summary statistics of the historical SAR ob-
+servations. In parallel, a TCEV model is independently fitted to the historical observations
+of each pixel. Third, TabPFN (Tabular Prior-data Fitted Network) uses the extracted histori-
+cal SAR statistical features and labeled flood/non-flood samples as context examples for
+pixel-wise classification. The resulting classifier is then applied to study area observations
+to infer the maximum flood extent at the pixel level. Finally, the inferred maximum flood
+extent is integrated with the event-based SAR image and pixel-wise TCEV characteristics to
+generate the TFAM, which depicts the spatial distribution of event-induced flood anomalies
+relative to historical SAR variability.
+3.1. Sentinel-1 Data Processing and Historical Time-Series Construction
+To establish a robust historical SAR observation database, Sentinel-1 GRD products
+acquired from the Google Earth Engine (GEE; Google LLC., Mountain View, CA, USA)
+COPERNICUS/S1_GRD collection were used [43]. These products had already undergone
+https://doi.org/10.3390/rs18193323
+--- PAGE 8 ---
+Remote Sens. 2026, 18, 3323 8 of 32
+standard preprocessing in GEE, including precise orbit correction [44], GRD border noise
+removal, thermal noise removal [45], radiometric calibration [46], terrain correction [47],
+and conversion to decibel (dB) scale [ 48]. The VH polarization was selected because
+it is more sensitive for distinguishing flooded and non-flooded surfaces and generally
+provides better flood mapping performance than VV polarization [ 49,50]. To minimize
+systematic backscatter differences caused by varying observation geometries, Sentinel-
+1 images were grouped according to their orbit information before analysis, ensuring
+consistent observation conditions across the time series [51].
+σ0
+dB = 10log 10σ0 (1)
+where σ0 represents the calibrated radar backscatter coefficient.
+No additional spatial speckle filtering was applied because such filtering could modify
+the extreme observations used for TCEV fitting and smooth narrow inundation boundaries.
+Permanent water was retained because TFAM characterizes each event observation relative
+to the historical distribution of the same pixel. No explicit layover and radar-shadow mask
+or additional local incidence-angle correction was applied. The use of consistent orbit
+geometry and pixel-wise historical distributions reduces the influence of persistent terrain
+and incidence-angle effects but does not completely eliminate them.
+Radar backscatter coefficients are influenced by seasonal variations in vegetation
+phenology and soil moisture conditions [17], resulting in substantial temporal fluctuations
+unrelated to flood events. Directly modeling SAR observations acquired throughout the
+entire year may mix these seasonal background variations with flood-induced backscatter
+changes, thereby reducing the separability of flood signals from normal environmental
+dynamics. Previous SAR time-series flood detection experiments have also reported that
+seasonal changes introduced by a longer temporal span can affect detection performance
+and that selecting pre-flood observations from the same season can provide more suitable
+background information [52]. To reduce broad seasonal differences in land surface condi-
+tions, Sentinel-1 observations were filtered according to acquisition months extracted from
+image metadata. The acquisition month of each flood event was assigned to one of four sea-
+sonal periods (March–May, June–August, September–November, and December–February).
+Sentinel-1 observations acquired within the same seasonal period during 2015–2026 were
+retained to construct pixel-wise background time series. This procedure represents seasonal
+filtering rather than temporal aggregation because the individual observations were not
+averaged or composited. It provides a more comparable broad seasonal background but
+does not eliminate variations in vegetation, cropping conditions, or soil moisture within
+the selected period. These within-period and interannual variations remain represented in
+the historical distribution of each pixel and may introduce uncertainty into the detected
+anomaly signals. The resulting seasonal SAR time-series stack was resampled to a 30 m
+grid using bilinear interpolation and stored in HDF5 format. This grid spacing was selected
+to reduce the computational burden of pixel-wise feature construction, TCEV fitting, and
+classifier inference across the study areas, at the expense of some spatial detail.
+3.2. Statistical Feature Construction and Pixel-Wise TCEV Fitting
+Flooded surfaces usually exhibit low SAR backscatter due to specular reflection ef-
+fects [26]. Therefore, rather than applying a universal threshold, this study characterizes the
+historical backscatter behavior independently for each pixel through a pixel-wise extreme
+value modeling strategy.
+For each pixel, long-term Sentinel-1 SAR observations acquired during the same
+seasonal period were first collected to establish a temporally consistent background distri-
+bution. Since flooded surfaces generally produce lower backscatter values due to specular
+https://doi.org/10.3390/rs18193323
+--- PAGE 9 ---
+Remote Sens. 2026, 18, 3323 9 of 32
+reflection from smooth water surfaces, the original backscatter coefficients were trans-
+formed by sign inversion:
+σ0′
+dB = −σ0
+dB (2)
+where σ0′
+dB denotes the transformed value used for subsequent analysis. This transformation
+converts flood-induced low-backscatter observations into high values in the transformed
+domain, allowing flood signals to be represented as upper-tail extreme events and enabling
+their characterization using extreme value theory.
+For each pixel, the transformed observations were sorted in ascending order:
+σ0′
+dB(1)
+≤ σ0′
+dB(2)
+≤···≤ σ0′
+dB(n)
+(3)
+and the empirical Cumulative Distribution Function (CDF) was calculated using a rank-
+based estimator [53,54]:
+F
+
+σ0′
+dB
+
+= P
+
+X ≤ σ0′
+dB
+
+= i
+n + 1 (4)
+where i represents the rank of the observation and n denotes the total number of historical
+SAR observations.
+The empirical CDF provides a pixel-specific statistical description of long-term SAR
+variability, allowing each observation to be evaluated according to its relative rarity within
+the historical distribution rather than relying on absolute backscatter thresholds. In this
+method, flood detection is reformulated as identifying observations that significantly
+deviate from the normal temporal behavior of each pixel.
+To enhance the representation of extreme responses, the empirical CDF was further
+transformed using a double logarithmic extreme-value probability transformation function:
+y =−ln
+
+−ln
+
+F(σ0′
+dB )
+
+(5)
+This transformation expands the distribution tail and increases the separability be-
+tween normal background variations and extreme flood-induced responses. In the trans-
+formed space, the temporal distribution of each pixel exhibits distinct structural charac-
+teristics, where normal observations and extreme responses can be separated based on
+their distributional transition. Therefore, a piecewise linear fitting strategy was applied
+to identify the transition point between regular variations and extreme behaviors and to
+extract pixel-specific statistical characteristics associated with extreme flood responses.
+Based on the piecewise linear fitting results, a set of statistical descriptors character-
+izing the temporal evolution, transition behavior, and extreme response patterns of the
+transformed SAR signals was extracted. These descriptors were further organized into a
+9-channel feature tensor:
+X∈ RN×9 (6)
+where each channel represents a statistical feature derived from the historical SAR dis-
+tribution and extreme response characteristics. Specifically, C1 represents the slope ratio
+between the two fitted linear segments, reflecting the difference in SAR variation rates
+before and after the transition point. C2 and C3 denote the slope and intercept of the first
+fitted linear segment, respectively, describing the regular SAR variation. C4 and C5 repre-
+sent the slope and intercept of the second fitted linear segment, respectively, characterizing
+the extreme response after the transition point. C6 and C7 represent the breakpoint-related
+descriptors, indicating the temporal transition points where the SAR signal shifts from
+normal fluctuations to abnormal flood-induced behaviors. C8 represents the temporal vari-
+ation amplitude of dB values for each pixel, quantifying the magnitude of SAR backscatter
+https://doi.org/10.3390/rs18193323
+--- PAGE 10 ---
+Remote Sens. 2026, 18, 3323 10 of 32
+changes over the observation period. C9 represents the mean value of the upper 10% SAR
+responses, quantifying the intensity of extreme tail responses and highlighting pixels with
+pronounced flood-related backscatter changes. The nine descriptors C1–C9 are constructed
+from historical SAR observations independently of TCEV fitting. C1–C7 describe the fitted
+segments and breakpoint of the transformed empirical distribution, whereas C8 and C9
+represent the temporal amplitude and upper-tail mean, respectively. These descriptors
+constitute the input features used by TabPFN. Because C1–C9 were derived from the com-
+plete seasonal observation series, target-event observations may contribute to C8 when
+they expand the full backscatter range and to C9 when they occur within the upper 10%
+of transformed responses. This contribution is consistent with the use of these features by
+TabPFN to identify the event-informed maximum flood extent. C8 and C9 are not treated
+as parameters of the TCEV distribution.
+Separately, a TCEV model was fitted for each pixel as a two-component parametric
+approximation of the transformed historical seasonal SAR distribution [34]:
+FTCEV
+
+σ0′
+dB
+
+= e−e−α1∗(σ0′
+dB−β1)
+× e−e−α2∗(σ0′
+dB−β2)
+(7)
+where σ0′
+dB denotes the transformed VH backscatter coefficient in dB. Equation (7) cor-
+responds to the classical TCEV formulation expressed as the product of two Gumbel
+cumulative distributions. The descriptors C2–C5 obtained from the piecewise linear fit-
+ting were used to generate the initial values for the nonlinear fitting of the TCEV model,
+specifically, α1 = C2, β1 =−C3/C2, α2 = C4, β2 =−C5/C4. The final parameters were
+estimated for each pixel by nonlinear least-squares fitting of the complete TCEV cumulative
+distribution to the empirical cumulative probabilities of all historical seasonal observations.
+Therefore, C2–C5 were used only to initialize the nonlinear optimization and were not
+directly treated as the final TCEV parameters.
+The same-season Sentinel-1 observations used in this study are routine SAR acquisi-
+tions rather than block maxima or threshold exceedances. Accordingly, the TCEV model is
+used as a two-component parametric approximation of the transformed historical seasonal
+distribution at each pixel and is not used for classical return-period estimation. The two
+components have a statistical rather than uniquely determined physical interpretation.
+One component mainly represents the dominant range of historical backscatter variability,
+whereas the second provides additional flexibility for representing the upper tail of the
+transformed distribution, which corresponds to unusually low VH backscatter on the
+original scale. Such observations may be associated with inundation, although similar
+backscatter responses may also result from soil moisture, vegetation, permanent water,
+or radar observation geometry. In the proposed framework, this ambiguity is reduced by
+restricting TFAM calculation to the TabPFN-derived historical flood extent and interpreting
+the resulting conditional anomaly scores together with their spatial context and available
+supporting evidence.
+The fitted TCEV distribution is independent of the construction of C1–C9. It is subse-
+quently used to calculate the cumulative probability of the event-period VH observation at
+each pixel. This probability represents the statistical rarity of the observation relative to the
+historical seasonal distribution and serves as the anomaly score used for TFAM generation.
+Higher probabilities indicate more unusual VH backscatter observations relative to the
+historical behavior of the same pixel.
+3.3. TabPFN Flood Classification and Temporal Anomaly Mapping
+The labeled points used for TabPFN classification were not extracted from the reference
+flood extents used for the final accuracy evaluation. Instead, flood and non-flood samples
+https://doi.org/10.3390/rs18193323
+--- PAGE 11 ---
+Remote Sens. 2026, 18, 3323 11 of 32
+were manually interpreted and labeled using a high-resolution (3 m) Planet optical image
+acquired over Guangxi on 1 October 2025. Pixels showing clear inundation characteris-
+tics and clearly non-inundated conditions were selected, while flood boundaries, cloud
+shadows, and mixed pixels were avoided where possible. The labels were stored as vector
+points, with value = 1 representing non-flood samples and value = 2 representing flood
+samples. Before classification, these labels were recoded as y = 0 for non-flood and y = 1
+for flood. The nine long-term seasonal SAR statistical features were then extracted at the
+labeled locations. Points containing invalid values or missing one or more feature values
+were excluded.
+A total of 83 valid samples were retained, including 44 flood samples (53.01%) and
+39 non-flood samples (46.99%). The nine input variables provided to TabPFN corresponded
+to the statistical descriptors C1–C9. Because TabPFN is a pretrained tabular foundation
+model, these labeled points were used as context samples for classification. No split into
+training, validation, and test subsets or gradient-based model retraining was performed.
+The nine statistical features, C1–C9, were constructed from the seasonally filtered long-
+term Sentinel-1 time series, including both normal observations and historical flood-affected
+observations. The resulting 9-channel feature tensor represents the statistical characteristics
+of the historical SAR observations at each pixel. The TabPFN classifier, a transformer-
+based tabular model with in-context learning capability, was employed for pixel-wise flood
+classification under small-sample conditions [55]. The experiment used TabPFN with eight
+internal estimators, random_state = 0, and CPU execution. The feature vectors and recoded
+binary labels from Guangxi were supplied to TabPFN as labeled context examples, allowing
+the model to infer the relationship between the SAR statistical characteristics and the flood
+classes without gradient-based retraining. The flood occurrence probability of each pixel
+was estimated as:
+Pf = P(y = 1|Xi) (8)
+where Pf represents the probability that a pixel belongs to the historical flood category
+based on its SAR temporal characteristics. A fixed probability threshold of 0.5 was used
+to convert the TabPFN probabilities into a binary maximum flood extent mask at a 30 m
+pixel spacing. This threshold was used only for TabPFN classification and was distinct
+from the event-specific thresholds subsequently used to evaluate the TFAM-derived binary
+flood maps. For the main four-case analysis, the same Guangxi context samples and
+TabPFN configuration were applied to all four study areas without target-region refitting
+or classification-threshold optimization.
+For each pixel within the identified flood inundation region, the corresponding SAR
+observation acquired during the flood event was introduced into its pixel-specific TCEV
+model established from historical seasonal observations. The cumulative probability of the
+event observation was calculated as:
+F
+
+σ0′
+dB
+
+= FTCEV
+
+σ0′
+dB
+
+(9)
+The resulting cumulative probability was retained as the TFAM value for the cor-
+responding acquisition date. A higher F
+
+σ0′
+dB
+
+value indicates that the event-period VH
+observation is more statistically unusual relative to the historical seasonal distribution of the
+same pixel. Each TFAM was calculated using only the image acquired on the corresponding
+date; therefore, later target-event observations were not used to generate an earlier-date
+TFAM. Although the TFAM anomaly scores were originally calculated within the maximum
+historical flood extent identified by TabPFN, pixels without a TFAM value, including pixels
+outside this extent, were assigned an anomaly score of 0 during quantitative evaluation.
+https://doi.org/10.3390/rs18193323
+--- PAGE 12 ---
+Remote Sens. 2026, 18, 3323 12 of 32
+This allowed omission errors outside the TabPFN-defined spatial constraint to be evaluated
+within the complete reference validation boundary.
+Finally, the spatial flood classification results from TabPFN and the temporal anomaly
+information derived from the TCEV fitting were integrated to generate the TFAM. The
+TabPFN-based maximum inundation extent provides spatial constraints for potential
+flooded areas, while the TCEV-derived F
+
+σ0′
+dB
+
+values characterize the degree of tem-
+poral abnormality at the pixel level. This combination supports flood anomaly mapping by
+jointly considering spatial classification and the temporal rarity of SAR changes.
+3.4. Accuracy Assessment of TFAMs
+3.4.1. Evaluation of TFAMs
+The generated TFAMs were evaluated to quantify their capability in representing
+flood-related anomalies and distinguishing flooded areas from non-flooded backgrounds.
+Unlike binary flood products, TFAMs provide continuous statistical anomaly scores at the
+pixel level, where larger values indicate stronger temporal deviations associated with flood
+occurrence. Therefore, the TFAM values were treated as continuous anomaly scores and
+compared with the reference flood labels without introducing a predefined threshold.
+Before evaluation, a date-specific polygon shapefile was used to define the complete
+validation boundary. A common evaluation grid covering this boundary was constructed
+using the coordinate reference system, pixel spacing, grid orientation, and pixel alignment
+of the corresponding reference raster. The TFAM and reference flood raster were then re-
+projected onto this common grid using nearest-neighbor resampling. Within the validation
+boundary, reference flood pixels were encoded as 1 and all remaining pixels were encoded
+as 0. TFAM values retained their original continuous range of 0–1, whereas pixels without
+a TFAM value, including those outside the maximum historical flood extent identified
+by TabPFN, were assigned a value of 0. Pixels outside the polygon validation boundary
+were excluded.
+Consequently, the reference-label array and TFAM-score array contained exactly the
+same number of pixels, and all pixels within the date-specific validation boundary were
+included in the ROC, precision-recall, threshold-sensitivity, and confusion-matrix calcula-
+tions. A reference flood pixel located outside the TabPFN-derived maximum flood extent
+was therefore counted as a false negative rather than being excluded, whereas a reference
+non-flood pixel in this area was counted as a true negative. The reported metrics thus
+represent the end-to-end performance of the complete framework over the reference vali-
+dation domain rather than conditional performance restricted to the TabPFN-derived mask.
+Resampling the reference products to the common 30 m analysis grid may nevertheless
+omit narrow inundated features and alter flood-boundary representation; therefore, the
+reported accuracy reflects spatial agreement at the 30 m scale.
+The discriminative capability of TFAM was evaluated using the Receiver Operating
+Characteristic (ROC) curve and Precision-Recall (PR) curve [56]. For a given threshold t,
+pixels exceeding t were classified as flood candidates, and the True Positive Rate (TPR,
+equivalent to Recall) and False Positive Rate (FPR) were calculated as:
+TPR (t) = Recall (t) =
+TP (t)
+TP (t)+FN (t)
+FPR (t) =
+FP(t)
+FP(t)+TN (t)
+(10)
+where TP (t), TN (t), FP(t), and FN (t) denote the numbers of True Positive, True Negative,
+False Positive, and False Negative pixels under threshold t, respectively [57]. The ROC-
+AUC was calculated by integrating the TPR over different FPR levels:
+https://doi.org/10.3390/rs18193323
+--- PAGE 13 ---
+Remote Sens. 2026, 18, 3323 13 of 32
+AUC =
+Z 1
+0
+TPR (FPR )dFPR (11)
+where TPR represents the proportion of correctly identified flooded pixels among all
+reference flooded pixels, and FPR denotes the proportion of non-flooded pixels incorrectly
+classified as flooded. A higher AUC indicates a stronger capability of TFAM to discriminate
+flooded and non-flooded areas across different thresholds.
+Considering the severe class imbalance commonly encountered in flood mapping
+tasks, the PR curve was additionally employed [58]. Precision was calculated as:
+Precision (t) =
+TP (t)
+TP (t) + FP(t)
+(12)
+The Average Precision (AP), representing the area under the PR curve, was calcu-
+lated as:
+AP = ∑
+n
+(Rn− Rn−1)Pn (13)
+where Pn and Rn represent precision and recall values at the n-th threshold, respectively.
+The ROC-AUC and AP jointly characterize the intrinsic anomaly discrimination capability
+of TFAM without relying on a specific segmentation threshold [59].
+3.4.2. Evaluation of Binary Flood Extent Maps
+To further evaluate the practical flood mapping capability of TFAM, continuous
+anomaly maps were converted into Binary Flood Extent Maps (BFEMs) through threshold
+segmentation. A threshold sensitivity analysis was conducted by varying the threshold
+from 0.05 to 0.95 with an interval of 0.01. For each threshold t, the binary flood map was
+generated as:
+B(x, y) =
+(
+1, TFAM (x, y)≥ t
+0, TFAM (x, y) < t (14)
+where B(x, y) represents the binary flood classification result at pixel location (x, y).
+The generated binary flood maps were compared with the reference flood masks
+using pixel-level spatial accuracy metrics, including precision, recall, F1-score [ 60], and
+Intersection over Union (IoU). Precision measures the proportion of correctly identified
+flooded pixels among all predicted flooded pixels, whereas recall (equivalent to TPR defined
+above) evaluates the proportion of reference flooded pixels that are successfully detected.
+The F1-score was calculated as:
+F1 = 2× TP
+2× TP + FP + FN (15)
+The spatial agreement between the flood extents derived from the proposed method
+and the reference flood extents was further quantified using the IoU [61,62]:
+IoU = TP
+TP + FP + FN (16)
+In addition, the Cohen’s Kappa coefficient was used to evaluate the overall agreement
+between the extracted flood maps and reference flood masks while considering the possi-
+bility of agreement occurring by chance. Unlike F1-score and IoU, which mainly focus on
+the positive flood class, Kappa provides a comprehensive measurement of classification
+consistency by considering both flooded and non-flooded pixels [63]. A higher Kappa value
+indicates stronger agreement between the extracted flood extent and the reference flood
+https://doi.org/10.3390/rs18193323
+--- PAGE 14 ---
+Remote Sens. 2026, 18, 3323 14 of 32
+map. The optimal segmentation threshold was determined separately for each observation
+date by maximizing the F1-score:
+t∗ = arg max
+t
+F1(t) (17)
+The corresponding F1-score, IoU, and Kappa were reported as event-specific optimal
+results. Because the threshold was selected and evaluated using the same reference flood
+map, these metrics represent the maximum within-case agreement obtained through post
+hoc threshold selection and may provide an optimistic estimate of mapping performance.
+They should not be interpreted as independent accuracy estimates for unknown dates
+or flood events, and the resulting optimal thresholds are not assumed to be transferable
+between regions.
+3.4.3. Cross-Region Transfer Design and Evaluation Metrics
+To further examine cross-region transferability of the TabPFN classification component,
+a reciprocal transfer experiment was conducted between Guangxi and New South Wales.
+A New South Wales label set was manually interpreted from a high-resolution (3 m) Planet
+optical image acquired on 1 April 2022, using the same point-selection criteria applied
+in Guangxi. It contained 115 valid samples, including 58 flood samples (50.43%) and
+57 non-flood samples (49.57%). The same nine statistical descriptors, C1–C9, were used as
+inputs for both regional models.
+The Guangxi regional model was directly applied to New South Wales without using
+New South Wales labels for refitting. Conversely, the New South Wales regional model
+was directly applied to Guangxi without using Guangxi labels for refitting. This design
+evaluated reciprocal cross-region model transfer rather than leave-one-event-out validation.
+For each target region, the local-model result was used as a comparison baseline
+and was not treated as a ground-truth flood label. Prediction results were clipped using
+the predefined study-area boundaries for New South Wales and Guangxi, respectively.
+Evaluation was performed only over pixels valid in both the local and transferred-model
+results. Pearson’s correlation coefficient was used to assess consistency between continuous
+probability maps. Binary candidate masks generated using the fixed probability thresh-
+old of 0.5 were compared using IoU and Cohen’s Kappa to quantify spatial overlap and
+classification agreement, respectively. This experiment assessed whether the transferred
+model retained the principal probability structure and candidate spatial distribution identi-
+fied by the target-region local model; it did not replace independent reference-data-based
+flood-mapping accuracy evaluation.
