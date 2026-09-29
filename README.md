@@ -13,6 +13,15 @@ Reproduction of the core method from:
 
 For complete technical specifications, equations, and architecture diagrams, see [PHASES.md](PHASES.md).
 
+```
+Current Status:
+[ Phase 1 ] Study Area & Event Selection     --> 🟡 PENDING DECISION (Select Target Event)
+[ Phase 2 ] GEE Ingestion Pipeline           --> 🟡 READY TO RUN (GEE Auth is verified live)
+[ Phase 3 ] Batch/Parallel TCEV Engine       --> 🟡 READY TO CODE (Core 1D math verified)
+[ Phase 4 ] TabPFN Spatial Masking           --> 🟢 OPERATIONAL (TabPFN v9 + Fallback ready)
+[ Phase 5 ] TFAM Visualization & Metrics     --> 🟢 LOGIC READY (Needs real raster inputs)
+```
+
 | Phase | Description | Paper Section & Equations | Primary Modules | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **Phase 1** | Sentinel-1 GEE Data Ingestion & Seasonal Slicing | Sec 3.1, Eq. 1 | `test_gee.py`, `gee_pipeline.py` | ✅ **GEE Live & Authenticated** |
