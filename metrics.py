@@ -89,3 +89,31 @@ def full_event_report(tfam_flat: np.ndarray, ref_flat: np.ndarray) -> dict:
         "precision": best.precision, "recall": best.recall,
         "f1": best.f1, "iou": best.iou, "kappa": best.kappa,
     }
+
+
+def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
+    """
+    Convenience wrapper: compute standard accuracy metrics from integer
+    ground-truth and prediction arrays (0 = non-flood, 1 = flood).
+
+    Returns dict with keys: IoU, F1, Precision, Recall, OA, Kappa.
+    """
+    y_true = np.asarray(y_true).ravel()
+    y_pred = np.asarray(y_pred).ravel()
+
+    tp, fp, fn, tn = _confusion(y_pred, y_true)
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) else 0.0
+    iou = tp / (tp + fp + fn) if (tp + fp + fn) else 0.0
+    oa = (tp + tn) / (tp + fp + fn + tn) if (tp + fp + fn + tn) else 0.0
+    kappa = float(cohen_kappa_score(y_true, y_pred)) if len(np.unique(y_true)) > 1 else 0.0
+
+    return {
+        "IoU": iou,
+        "F1": f1,
+        "Precision": precision,
+        "Recall": recall,
+        "OA": oa,
+        "Kappa": kappa,
+    }
