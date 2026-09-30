@@ -14,12 +14,11 @@ Reproduction of the core method from:
 For complete technical specifications, equations, and architecture diagrams, see [PHASES.md](PHASES.md).
 
 ```
-Current Status:
-[ Phase 1 ] Regional Event Presets & Ingestion --> 🟢 COMPLETED (gee_pipeline.py live with 4 regions)
+[ Phase 1 ] Regional Event Ingestion Pipeline --> 🟢 COMPLETED (gee_pipeline.py with Córdoba, Zagora, Guangxi, NSW)
 [ Phase 2 ] Feature Tensor Extraction (C1-C9)  --> 🟢 COMPLETED (features.py verified on real S1 data)
-[ Phase 3 ] Batch/Parallel TCEV Engine         --> 🟡 IN PROGRESS (1D verified on real S1 data)
-[ Phase 4 ] TabPFN Spatial Masking             --> 🟢 OPERATIONAL (TabPFN v9 + Fallback ready)
-[ Phase 5 ] TFAM Visualization & Metrics       --> 🟢 LOGIC READY (Needs real raster inputs)
+[ Phase 3 ] Batch/Parallel TCEV Engine         --> 🟡 IN PROGRESS (batch_tcev.py added; needs validation on real S1 grids)
+[ Phase 4 ] TabPFN Spatial Masking             --> 🟢 OPERATIONAL (TabPFN + fallback ready)
+[ Phase 5 ] TFAM Visualization & Metrics       --> 🟡 IN PROGRESS (visualize.py added; needs real raster inputs)
 ```
 
 | Phase | Description | Paper Section & Equations | Primary Modules | Status |
