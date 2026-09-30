@@ -10,20 +10,20 @@ This document outlines the **end-to-end phased architecture** for the Temporal F
 ## Current Status Dashboard
 
 ```
-[ Phase 1 ] Study Area & Event Selection     --> 🟡 PENDING DECISION (Select Target Event)
-[ Phase 2 ] GEE Ingestion Pipeline           --> 🟡 READY TO RUN (GEE Auth is verified live)
-[ Phase 3 ] Batch/Parallel TCEV Engine       --> 🟡 READY TO CODE (Core 1D math verified)
-[ Phase 4 ] TabPFN Spatial Masking           --> 🟢 OPERATIONAL (TabPFN v9 + Fallback ready)
-[ Phase 5 ] TFAM Visualization & Metrics     --> 🟢 LOGIC READY (Needs real raster inputs)
+[ Phase 1 ] Regional Event Ingestion Pipeline --> 🟢 COMPLETED (gee_pipeline.py with Córdoba, Zagora, Guangxi, NSW)
+[ Phase 2 ] Feature Tensor Extraction (C1-C9)  --> 🟢 COMPLETED (features.py verified on real S1 data)
+[ Phase 3 ] Batch/Parallel TCEV Engine         --> 🟡 IN PROGRESS (1D verified on real S1 data)
+[ Phase 4 ] TabPFN Spatial Masking             --> 🟢 OPERATIONAL (TabPFN v9 + Fallback ready)
+[ Phase 5 ] TFAM Visualization & Metrics       --> 🟢 LOGIC READY (Needs real raster inputs)
 ```
 
 ### Detailed Progress Tracking
 
 | Phase | Component | What is Done ✅ | What Needs to be Done Next ⏳ |
 | :--- | :--- | :--- | :--- |
-| **Phase 1** | **Study Area Selection** | Identified paper benchmark events (Córdoba EMSR865, Zagora EMSR692, NSW EMSR570). | Lock target event choice (e.g. Córdoba, Spain / EMSR865). |
-| **Phase 2** | **GEE Ingestion (`gee_pipeline.py`)** | Google Earth Engine authenticated and verified live (`test_gee.py`). | Pull Sentinel-1 VH stack (same season, fixed orbit) and event scene. |
-| **Phase 3** | **Batch Acceleration (`batch_tcev.py`)** | Single-pixel & 500-pixel synthetic tests passing 100%. | Upgrade serial loop to chunked multiprocessing across 2D/3D grids. |
+| **Phase 1** | **Regional Event Ingestion (`gee_pipeline.py`)** | Built full GEE pipeline with 4 benchmark regional presets (Córdoba, Zagora, Guangxi, NSW) & tested live. | Ready for batch grid extraction. |
+| **Phase 2** | **Feature Tensor Extraction (`features.py`)** | Validated $C_1$–$C_9$ on synthetic data and real Sentinel-1 multi-year pixel series. | Ready for full 2D raster grids. |
+| **Phase 3** | **Batch Acceleration (`batch_tcev.py`)** | Verified bounded TCEV parameter estimation on real Sentinel-1 data. | Build chunked multiprocessing for 2D/3D grids. |
 | **Phase 4** | **Spatial Masking (`classify.py`)** | TabPFN installed; automatic fallback mode integrated. | Run in-context inference to produce spatial maximum flood mask ($P_f \ge 0.5$). |
 | **Phase 5** | **TFAM Fusion & Visualization** | Math in `tfam.py` and threshold sweep in `metrics.py` verified. | Build `visualize.py` for side-by-side maps & GeoTIFF exports. |
 

@@ -15,18 +15,18 @@ For complete technical specifications, equations, and architecture diagrams, see
 
 ```
 Current Status:
-[ Phase 1 ] Study Area & Event Selection     --> 🟡 PENDING DECISION (Select Target Event)
-[ Phase 2 ] GEE Ingestion Pipeline           --> 🟡 READY TO RUN (GEE Auth is verified live)
-[ Phase 3 ] Batch/Parallel TCEV Engine       --> 🟡 READY TO CODE (Core 1D math verified)
-[ Phase 4 ] TabPFN Spatial Masking           --> 🟢 OPERATIONAL (TabPFN v9 + Fallback ready)
-[ Phase 5 ] TFAM Visualization & Metrics     --> 🟢 LOGIC READY (Needs real raster inputs)
+[ Phase 1 ] Regional Event Presets & Ingestion --> 🟢 COMPLETED (gee_pipeline.py live with 4 regions)
+[ Phase 2 ] Feature Tensor Extraction (C1-C9)  --> 🟢 COMPLETED (features.py verified on real S1 data)
+[ Phase 3 ] Batch/Parallel TCEV Engine         --> 🟡 IN PROGRESS (1D verified on real S1 data)
+[ Phase 4 ] TabPFN Spatial Masking             --> 🟢 OPERATIONAL (TabPFN v9 + Fallback ready)
+[ Phase 5 ] TFAM Visualization & Metrics       --> 🟢 LOGIC READY (Needs real raster inputs)
 ```
 
 | Phase | Description | Paper Section & Equations | Primary Modules | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Phase 1** | Sentinel-1 GEE Data Ingestion & Seasonal Slicing | Sec 3.1, Eq. 1 | `test_gee.py`, `gee_pipeline.py` | ✅ **GEE Live & Authenticated** |
-| **Phase 2** | Statistical Feature Tensor Construction ($C_1$–$C_9$) | Sec 3.2, Eqs. 2–6 | `features.py` | ✅ **Validated (100% Pass)** |
-| **Phase 3** | Pixel-Wise Bounded TCEV Distribution Modeling | Sec 3.2, Eqs. 7 & 9 | `tcev.py` | ✅ **Validated (100% Pass)** |
+| **Phase 1** | Sentinel-1 GEE Regional Ingestion & Seasonal Slicing | Sec 3.1, Eq. 1 | `gee_pipeline.py` | ✅ **Live on GEE (Córdoba, Zagora, Guangxi, NSW)** |
+| **Phase 2** | Statistical Feature Tensor Construction ($C_1$–$C_9$) | Sec 3.2, Eqs. 2–6 | `features.py` | ✅ **Validated on Synthetic & Real S1 Data** |
+| **Phase 3** | Pixel-Wise Bounded TCEV Distribution Modeling | Sec 3.2, Eqs. 7 & 9 | `tcev.py` | ✅ **Validated on Synthetic & Real S1 Data** |
 | **Phase 4** | In-Context TabPFN Spatial Flood Extent Masking | Sec 3.3, Eq. 8 | `classify.py` | ✅ **Operational (TabPFN + Fallback)** |
 | **Phase 5** | TFAM Anomaly Fusion & BFEM Accuracy Assessment | Sec 3.3–3.4, Eqs. 10–17 | `tfam.py`, `metrics.py` | ✅ **Validated (100% Pass)** |
 
